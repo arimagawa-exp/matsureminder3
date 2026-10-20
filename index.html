@@ -1,0 +1,1120 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <!-- 検索エンジン除外（noindex）設定 -->
+    <meta name="robots" content="noindex, nofollow">
+    
+    <!-- iPhoneホーム画面用アイコン & ブラウザファビコン設定 -->
+    <link rel="apple-touch-icon" sizes="180x180" href="icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="icon.png">
+    <link rel="shortcut icon" href="icon.png">
+
+    <title>MatsuReminder</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        /* Custom accent color styles */
+        .bg-accent { background-color: #5abfb7; }
+        .text-accent { color: #5abfb7; }
+        .border-accent { border-color: #5abfb7; }
+        .focus-ring-accent:focus { outline: none; box-shadow: 0 0 0 2px #5abfb7; }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 flex flex-col h-screen overflow-hidden">
+
+    <!-- Header -->
+    <header class="bg-slate-900 border-b border-slate-800 text-white px-4 py-3 flex items-center justify-between shadow-md z-10 shrink-0">
+        <div class="flex items-center space-x-2">
+            <h1 class="font-bold text-lg tracking-wide">MatsuReminder</h1>
+        </div>
+        <button id="btnNotificationPermission" onclick="requestNotificationPermission()" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-3 py-1.5 rounded-full flex items-center gap-1.5 transition">
+            <i class="fa-solid fa-bell text-accent"></i>
+            <span id="notificationStatusText">通知許可</span>
+        </button>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 overflow-y-auto relative no-scrollbar pb-20">
+        
+        <!-- ================= PAGE 1: TASK LIST ================= -->
+        <section id="pageTaskList" class="p-4 max-w-lg mx-auto space-y-4">
+            <!-- Filter & Search Bar -->
+            <div class="bg-slate-900 p-3 rounded-2xl border border-slate-800 shadow-lg flex flex-col gap-3">
+                <div class="relative">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"></i>
+                    <input type="text" id="searchInput" oninput="renderTasks()" placeholder="課題・タスクを検索..." class="w-full pl-9 pr-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-sm text-slate-100 placeholder-slate-500 focus-ring-accent">
+                </div>
+                <!-- Category Filter -->
+                <div class="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+                    <button onclick="setFilter('all')" id="filterAll" class="filter-btn px-3 py-1 text-xs font-semibold rounded-full bg-accent text-slate-950 shadow-sm whitespace-nowrap">すべて</button>
+                    <button onclick="setFilter('pending')" id="filterPending" class="filter-btn px-3 py-1 text-xs font-semibold rounded-full bg-slate-800 text-slate-300 hover:bg-slate-700 whitespace-nowrap">進行中</button>
+                    <button onclick="setFilter('completed')" id="filterCompleted" class="filter-btn px-3 py-1 text-xs font-semibold rounded-full bg-slate-800 text-slate-300 hover:bg-slate-700 whitespace-nowrap">完了済</button>
+                </div>
+            </div>
+
+            <!-- Task Counter Summary -->
+            <div class="flex justify-between items-center px-1 text-xs font-medium text-slate-400">
+                <span id="taskCountText">全 0 件の課題</span>
+                <span id="urgentCountText" class="text-amber-400 font-semibold"></span>
+            </div>
+
+            <!-- Task Items Container -->
+            <div id="taskList" class="space-y-3">
+                <!-- Task items rendered via JS -->
+            </div>
+        </section>
+
+        <!-- ================= PAGE 2: CALENDAR ================= -->
+        <section id="pageCalendar" class="p-4 max-w-lg mx-auto hidden space-y-4">
+            <!-- Calendar Navigation Header -->
+            <div class="bg-slate-900 p-4 rounded-2xl border border-slate-800 shadow-lg">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 id="calendarMonthYear" class="font-bold text-slate-100 text-lg"></h2>
+                    <div class="flex items-center space-x-1">
+                        <button onclick="changeMonth(-1)" class="p-2 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-slate-200 transition"><i class="fa-solid fa-chevron-left"></i></button>
+                        <button onclick="resetToToday()" class="px-2.5 py-1 text-xs font-semibold bg-slate-800 text-accent border border-slate-700 hover:bg-slate-700 rounded-lg transition">今日</button>
+                        <button onclick="changeMonth(1)" class="p-2 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-slate-200 transition"><i class="fa-solid fa-chevron-right"></i></button>
+                    </div>
+                </div>
+
+                <!-- Calendar Grid Header -->
+                <div class="grid grid-cols-7 text-center font-bold text-xs text-slate-500 mb-2">
+                    <div class="text-rose-400">日</div>
+                    <div>月</div>
+                    <div>火</div>
+                    <div>水</div>
+                    <div>木</div>
+                    <div>金</div>
+                    <div class="text-sky-400">土</div>
+                </div>
+
+                <!-- Calendar Days Grid -->
+                <div id="calendarGrid" class="grid grid-cols-7 gap-1 text-center text-sm">
+                    <!-- Days generated dynamically -->
+                </div>
+            </div>
+
+            <!-- Selected Date Tasks -->
+            <div class="bg-slate-900 p-4 rounded-2xl border border-slate-800 shadow-lg">
+                <h3 id="selectedDateTitle" class="font-semibold text-slate-300 text-sm mb-3 border-b border-slate-800 pb-2">
+                    選択した日の課題
+                </h3>
+                <div id="calendarSelectedTasks" class="space-y-2.5">
+                    <!-- Tasks for selected date generated here -->
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= PAGE 3: SETTINGS ================= -->
+        <section id="pageSettings" class="p-4 max-w-lg mx-auto hidden space-y-5">
+            <!-- Categories Management -->
+            <div class="bg-slate-900 p-4 rounded-2xl border border-slate-800 shadow-lg space-y-4">
+                <h3 class="font-bold text-slate-100 text-sm flex items-center gap-2 border-b border-slate-800 pb-2">
+                    <i class="fa-solid fa-tags text-accent"></i> カテゴリ・色設定
+                </h3>
+                <p class="text-xs text-slate-400">課題の分類カテゴリとカラーラベルを管理できます。</p>
+                
+                <!-- Category List -->
+                <div id="categorySettingsList" class="space-y-3">
+                    <!-- Dynamic categories rendered here -->
+                </div>
+
+                <!-- Add Category Form -->
+                <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-3 pt-3">
+                    <h4 class="text-xs font-bold text-slate-300">新しいカテゴリを追加</h4>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <input type="text" id="newCategoryLabel" placeholder="カテゴリ名 (例: 資格)" class="p-2 bg-slate-900 border border-slate-800 rounded-lg text-xs text-slate-100 focus-ring-accent">
+                        <select id="newCategoryColor" class="p-2 bg-slate-900 border border-slate-800 rounded-lg text-xs text-slate-100 focus-ring-accent">
+                            <option value="sky">ブルー (Sky)</option>
+                            <option value="rose">レッド (Rose)</option>
+                            <option value="emerald">グリーン (Emerald)</option>
+                            <option value="purple">パープル (Purple)</option>
+                            <option value="amber">イエロー/オレンジ (Amber)</option>
+                            <option value="pink">ピンク (Pink)</option>
+                            <option value="indigo">インディゴ (Indigo)</option>
+                        </select>
+                    </div>
+                    <button onclick="addNewCategory()" class="w-full py-2 bg-accent text-slate-950 font-bold rounded-lg text-xs transition hover:brightness-110">
+                        <i class="fa-solid fa-plus mr-1"></i> カテゴリを追加
+                    </button>
+                </div>
+            </div>
+
+            <!-- Category-based Notification Timing Toggle & Custom Text -->
+            <div class="bg-slate-900 p-4 rounded-2xl border border-slate-800 shadow-lg space-y-4">
+                <h3 class="font-bold text-slate-100 text-sm flex items-center gap-2 border-b border-slate-800 pb-2">
+                    <i class="fa-solid fa-bell text-accent"></i> カテゴリ別・時間帯別 通知文面＆タイミング設定
+                </h3>
+                <p class="text-xs text-slate-400">カテゴリごとに各時間帯の通知のON/OFFおよび送信する通知文面を設定できます。<br><span class="text-slate-500">※ {title} は課題名、{dueDate} は締め切り日に自動置換されます。</span></p>
+
+                <!-- Category Selector for Notification Timing Settings -->
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 mb-1">設定対象のカテゴリ</label>
+                    <select id="notifyCategorySelect" onchange="loadCategoryNotifySettings()" class="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-100 focus-ring-accent">
+                        <!-- Populated dynamically -->
+                    </select>
+                </div>
+
+                <div class="space-y-3.5" id="categoryNotifyTimings">
+                    <!-- 1週間前 21:00 -->
+                    <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-2">
+                        <label class="flex items-center justify-between cursor-pointer">
+                            <div class="flex flex-col">
+                                <span class="text-xs font-semibold text-slate-200">① 1週間前の 21:00</span>
+                                <span class="text-[10px] text-slate-500">締め切りまであと7日</span>
+                            </div>
+                            <input type="checkbox" id="chk_1w_21" checked class="w-4 h-4 accent-teal-400 rounded">
+                        </label>
+                        <input type="text" id="msg_1w_21" class="w-full p-2 bg-slate-900 border border-slate-800 rounded-lg text-xs text-slate-200 focus-ring-accent placeholder-slate-600" placeholder="【1週間前】「{title}」の締め切り（{dueDate}）まであと1週間です！">
+                    </div>
+
+                    <!-- 3日前 21:00 -->
+                    <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-2">
+                        <label class="flex items-center justify-between cursor-pointer">
+                            <div class="flex flex-col">
+                                <span class="text-xs font-semibold text-slate-200">② 3日前の 21:00</span>
+                                <span class="text-[10px] text-slate-500">締め切りまであと3日</span>
+                            </div>
+                            <input type="checkbox" id="chk_3d_21" checked class="w-4 h-4 accent-teal-400 rounded">
+                        </label>
+                        <input type="text" id="msg_3d_21" class="w-full p-2 bg-slate-900 border border-slate-800 rounded-lg text-xs text-slate-200 focus-ring-accent placeholder-slate-600" placeholder="【3日前】「{title}」の締め切りが近づいています！進捗はいかがですか？">
+                    </div>
+
+                    <!-- 前日 21:00 -->
+                    <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-2">
+                        <label class="flex items-center justify-between cursor-pointer">
+                            <div class="flex flex-col">
+                                <span class="text-xs font-semibold text-slate-200">③ 前日の 21:00</span>
+                                <span class="text-[10px] text-slate-500">締め切りまであと1日</span>
+                            </div>
+                            <input type="checkbox" id="chk_1d_21" checked class="w-4 h-4 accent-teal-400 rounded">
+                        </label>
+                        <input type="text" id="msg_1d_21" class="w-full p-2 bg-slate-900 border border-slate-800 rounded-lg text-xs text-slate-200 focus-ring-accent placeholder-slate-600" placeholder="【前日リマインド】明日「{title}」の締め切りです！提出忘れにご注意ください。">
+                    </div>
+
+                    <!-- 当日 08:00 -->
+                    <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-2">
+                        <label class="flex items-center justify-between cursor-pointer">
+                            <div class="flex flex-col">
+                                <span class="text-xs font-semibold text-slate-200">④ 当日の 08:00</span>
+                                <span class="text-[10px] text-slate-500">締め切り当日</span>
+                            </div>
+                            <input type="checkbox" id="chk_same_08" checked class="w-4 h-4 accent-teal-400 rounded">
+                        </label>
+                        <input type="text" id="msg_same_08" class="w-full p-2 bg-slate-900 border border-slate-800 rounded-lg text-xs text-slate-200 focus-ring-accent placeholder-slate-600" placeholder="【本日締切！】「{title}」は本日が最終締め切りです！">
+                    </div>
+                </div>
+
+                <button onclick="saveCategoryNotifySettings()" class="w-full py-2.5 bg-accent text-slate-950 font-bold rounded-xl text-xs transition hover:brightness-110 shadow-md">
+                    <i class="fa-solid fa-floppy-disk mr-1"></i> 通知設定・文面を保存
+                </button>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- FAB (Add Button) -->
+    <button onclick="openModal()" class="fixed right-5 bottom-20 bg-accent text-slate-950 font-bold w-14 h-14 rounded-full shadow-lg flex items-center justify-center text-2xl transition active:scale-95 z-20 hover:brightness-110">
+        <i class="fa-solid fa-plus"></i>
+    </button>
+
+    <!-- Navigation Bar (Bottom) -->
+    <nav class="fixed bottom-0 left-0 right-0 bg-slate-900 border-t border-slate-800 px-4 py-2 flex justify-around items-center z-20">
+        <button onclick="switchPage('tasks')" id="navTasks" class="flex flex-col items-center text-accent font-medium transition">
+            <i class="fa-solid fa-list-check text-xl"></i>
+            <span class="text-[11px] mt-0.5">課題一覧</span>
+        </button>
+        <button onclick="switchPage('calendar')" id="navCalendar" class="flex flex-col items-center text-slate-500 font-medium transition">
+            <i class="fa-solid fa-calendar-days text-xl"></i>
+            <span class="text-[11px] mt-0.5">カレンダー</span>
+        </button>
+        <button onclick="switchPage('settings')" id="navSettings" class="flex flex-col items-center text-slate-500 font-medium transition">
+            <i class="fa-solid fa-gear text-xl"></i>
+            <span class="text-[11px] mt-0.5">設定</span>
+        </button>
+    </nav>
+
+    <!-- Task Input Modal -->
+    <div id="taskModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex justify-center items-end sm:items-center p-0 sm:p-4 hidden z-30">
+        <div class="bg-slate-900 border border-slate-800 w-full max-w-lg rounded-t-3xl sm:rounded-2xl p-5 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto animate-in slide-in-from-bottom duration-200">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+                <h3 id="modalTitle" class="font-bold text-slate-100 text-lg">新しい課題を追加</h3>
+                <button onclick="closeModal()" class="text-slate-500 hover:text-slate-300 p-1 text-xl"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+
+            <form id="taskForm" onsubmit="saveTask(event)" class="space-y-4">
+                <input type="hidden" id="taskId">
+                
+                <!-- Title -->
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 mb-1">課題タイトル <span class="text-rose-400">*</span></label>
+                    <input type="text" id="taskTitle" required placeholder="例: レポート提出, 資格勉強" class="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm text-slate-100 placeholder-slate-600 focus-ring-accent">
+                </div>
+
+                <!-- Category selection -->
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 mb-1">種類（カテゴリ）</label>
+                    <select id="taskCategory" class="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm text-slate-100 focus-ring-accent">
+                        <!-- Populated dynamically -->
+                    </select>
+                </div>
+
+                <!-- Description -->
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 mb-1">詳細メモ</label>
+                    <textarea id="taskDesc" rows="2" placeholder="詳細やメモを入力..." class="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm text-slate-100 placeholder-slate-600 focus-ring-accent"></textarea>
+                </div>
+
+                <!-- Due Date & Time -->
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-400 mb-1">締め切り日 <span class="text-rose-400">*</span></label>
+                        <input type="date" id="taskDueDate" required class="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm text-slate-100 focus-ring-accent">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-400 mb-1">時</label>
+                        <select id="taskDueHour" class="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm text-slate-100 focus-ring-accent">
+                            <!-- Populated dynamically -->
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-400 mb-1">分 (1分刻み)</label>
+                        <select id="taskDueMinute" class="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm text-slate-100 focus-ring-accent">
+                            <!-- Populated dynamically -->
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Submit Button -->
+                <button type="submit" class="w-full py-3 bg-accent text-slate-950 font-bold rounded-xl text-sm shadow-md transition hover:brightness-110">
+                    保存する
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed top-4 left-1/2 -translate-x-1/2 bg-slate-800 border border-slate-700 text-slate-100 px-4 py-2.5 rounded-full text-xs shadow-xl opacity-0 transition-opacity duration-300 pointer-events-none z-50 flex items-center gap-2">
+        <i class="fa-solid fa-circle-info text-accent"></i>
+        <span id="toastMsg">メッセージ</span>
+    </div>
+
+    <script>
+        // --- IndexedDB Configuration for Persistent Offline Storage ---
+        const DB_NAME = 'MatsuReminderDB';
+        const DB_VERSION = 1;
+        const STORE_NAME = 'app_data';
+
+        function openDatabase() {
+            return new Promise((resolve, reject) => {
+                if (!window.indexedDB) {
+                    resolve(null);
+                    return;
+                }
+                const request = indexedDB.open(DB_NAME, DB_VERSION);
+                request.onupgradeneeded = function(e) {
+                    const db = e.target.result;
+                    if (!db.objectStoreNames.contains(STORE_NAME)) {
+                        db.createObjectStore(STORE_NAME);
+                    }
+                };
+                request.onsuccess = function(e) {
+                    resolve(e.target.result);
+                };
+                request.onerror = function(e) {
+                    console.error('IndexedDB open error:', e);
+                    resolve(null);
+                };
+            });
+        }
+
+        async function saveToIndexedDB(key, val) {
+            const db = await openDatabase();
+            if (!db) return;
+            return new Promise((resolve) => {
+                const tx = db.transaction(STORE_NAME, 'readwrite');
+                const store = tx.objectStore(STORE_NAME);
+                store.put(val, key);
+                tx.oncomplete = () => resolve();
+                tx.onerror = () => resolve();
+            });
+        }
+
+        async function getFromIndexedDB(key) {
+            const db = await openDatabase();
+            if (!db) return null;
+            return new Promise((resolve) => {
+                const tx = db.transaction(STORE_NAME, 'readonly');
+                const store = tx.objectStore(STORE_NAME);
+                const req = store.get(key);
+                req.onsuccess = () => resolve(req.result);
+                req.onerror = () => resolve(null);
+            });
+        }
+
+        // Color preset mapping
+        const COLOR_PRESETS = {
+            sky: { color: 'bg-sky-500/10 text-sky-400 border-sky-500/30', dot: 'bg-sky-400 ring-2 ring-sky-400/40 shadow-sm shadow-sky-500/50', name: 'ブルー' },
+            rose: { color: 'bg-rose-500/10 text-rose-400 border-rose-500/30', dot: 'bg-rose-400 ring-2 ring-rose-400/40 shadow-sm shadow-rose-500/50', name: 'レッド' },
+            emerald: { color: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30', dot: 'bg-emerald-400 ring-2 ring-emerald-400/40 shadow-sm shadow-emerald-500/50', name: 'グリーン' },
+            purple: { color: 'bg-purple-500/10 text-purple-400 border-purple-500/30', dot: 'bg-purple-400 ring-2 ring-purple-400/40 shadow-sm shadow-purple-500/50', name: 'パープル' },
+            amber: { color: 'bg-amber-500/10 text-amber-400 border-amber-500/30', dot: 'bg-amber-400 ring-2 ring-amber-400/40 shadow-sm shadow-amber-500/50', name: 'オレンジ' },
+            pink: { color: 'bg-pink-500/10 text-pink-400 border-pink-500/30', dot: 'bg-pink-400 ring-2 ring-pink-400/40 shadow-sm shadow-pink-500/50', name: 'ピンク' },
+            indigo: { color: 'bg-indigo-500/10 text-indigo-400 border-indigo-500/30', dot: 'bg-indigo-400 ring-2 ring-indigo-400/40 shadow-sm shadow-indigo-500/50', name: 'インディゴ' }
+        };
+
+        const DEFAULT_CATEGORIES = {
+            assignment: { label: '課題・レポート', colorKey: 'sky' },
+            exam: { label: '試験・テスト', colorKey: 'rose' },
+            document: { label: '提出書類', colorKey: 'emerald' },
+            other: { label: 'その他', colorKey: 'purple' }
+        };
+
+        const DEFAULT_NOTIFICATION_TEMPLATES = {
+            '1w_21': '【1週間前】「{title}」の締め切り（{dueDate}）まであと1週間です！',
+            '3d_21': '【3日前】「{title}」の締め切りが近づいています！進捗はいかがですか？',
+            '1d_21': '【前日リマインド】明日「{title}」の締め切りです！提出忘れにご注意ください。',
+            'same_08': '【本日締切！】「{title}」は本日が最終締め切りです！'
+        };
+
+        // --- Core Helper Functions ---
+        function getFormattedDateStr(dateObj) {
+            const y = dateObj.getFullYear();
+            const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+            const d = String(dateObj.getDate()).padStart(2, '0');
+            return `${y}-${m}-${d}`;
+        }
+
+        function getDaysRemaining(dueDateStr) {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const due = new Date(dueDateStr + 'T00:00:00');
+            const diffTime = due - today;
+            return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            const toastMsg = document.getElementById('toastMsg');
+            if (!toast || !toastMsg) return;
+            toastMsg.innerText = msg;
+            toast.classList.remove('opacity-0', 'pointer-events-none');
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'pointer-events-none');
+            }, 2500);
+        }
+
+        // State variables
+        let tasks = JSON.parse(localStorage.getItem('smart_tasks_data')) || [];
+        let customCategories = JSON.parse(localStorage.getItem('smart_tasks_categories')) || DEFAULT_CATEGORIES;
+        let categoryNotifyTimings = JSON.parse(localStorage.getItem('smart_tasks_cat_notify_timings')) || {};
+        let currentFilter = 'all';
+        let activePage = 'tasks';
+        let currentDate = new Date();
+        let selectedCalendarDateStr = getFormattedDateStr(new Date());
+
+        // Initialize & restore persistent storage from IndexedDB if localStorage cleared
+        async function initStorageSync() {
+            try {
+                const idbTasks = await getFromIndexedDB('smart_tasks_data');
+                const idbCategories = await getFromIndexedDB('smart_tasks_categories');
+                const idbTimings = await getFromIndexedDB('smart_tasks_cat_notify_timings');
+
+                if (idbTasks && tasks.length === 0) tasks = idbTasks;
+                if (idbCategories) customCategories = idbCategories;
+                if (idbTimings) categoryNotifyTimings = idbTimings;
+
+                saveToStorage();
+            } catch(e) {
+                console.error("Sync error:", e);
+            }
+        }
+
+        function saveToStorage() {
+            localStorage.setItem('smart_tasks_data', JSON.stringify(tasks));
+            localStorage.setItem('smart_tasks_categories', JSON.stringify(customCategories));
+            localStorage.setItem('smart_tasks_cat_notify_timings', JSON.stringify(categoryNotifyTimings));
+
+            // Sync to IndexedDB for browser-cache resilience
+            saveToIndexedDB('smart_tasks_data', tasks);
+            saveToIndexedDB('smart_tasks_categories', customCategories);
+            saveToIndexedDB('smart_tasks_cat_notify_timings', categoryNotifyTimings);
+        }
+
+        function getCategoryDetails(catKey) {
+            const cat = customCategories[catKey] || { label: '未分類', colorKey: 'purple' };
+            const preset = COLOR_PRESETS[cat.colorKey] || COLOR_PRESETS.purple;
+            return {
+                label: cat.label,
+                colorKey: cat.colorKey,
+                color: preset.color,
+                dot: preset.dot
+            };
+        }
+
+        // --- Page Navigation ---
+        function switchPage(page) {
+            activePage = page;
+            const pageTaskList = document.getElementById('pageTaskList');
+            const pageCalendar = document.getElementById('pageCalendar');
+            const pageSettings = document.getElementById('pageSettings');
+            const fabButton = document.querySelector('button[onclick="openModal()"]');
+            
+            const navTasks = document.getElementById('navTasks');
+            const navCalendar = document.getElementById('navCalendar');
+            const navSettings = document.getElementById('navSettings');
+
+            pageTaskList.classList.add('hidden');
+            pageCalendar.classList.add('hidden');
+            pageSettings.classList.add('hidden');
+
+            navTasks.className = 'flex flex-col items-center text-slate-500 font-medium transition';
+            navCalendar.className = 'flex flex-col items-center text-slate-500 font-medium transition';
+            navSettings.className = 'flex flex-col items-center text-slate-500 font-medium transition';
+
+            if (page === 'tasks') {
+                pageTaskList.classList.remove('hidden');
+                navTasks.className = 'flex flex-col items-center text-accent font-medium transition';
+                if (fabButton) fabButton.classList.remove('hidden');
+                renderTasks();
+            } else if (page === 'calendar') {
+                pageCalendar.classList.remove('hidden');
+                navCalendar.className = 'flex flex-col items-center text-accent font-medium transition';
+                if (fabButton) fabButton.classList.remove('hidden');
+                renderCalendar();
+            } else if (page === 'settings') {
+                pageSettings.classList.remove('hidden');
+                navSettings.className = 'flex flex-col items-center text-accent font-medium transition';
+                if (fabButton) fabButton.classList.add('hidden');
+                renderSettingsPage();
+            }
+        }
+
+        function setFilter(filter) {
+            currentFilter = filter;
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.className = 'filter-btn px-3 py-1 text-xs font-semibold rounded-full bg-slate-800 text-slate-300 hover:bg-slate-700 whitespace-nowrap';
+            });
+            if (filter === 'all') document.getElementById('filterAll').className = 'filter-btn px-3 py-1 text-xs font-semibold rounded-full bg-accent text-slate-950 shadow-sm whitespace-nowrap';
+            if (filter === 'pending') document.getElementById('filterPending').className = 'filter-btn px-3 py-1 text-xs font-semibold rounded-full bg-accent text-slate-950 shadow-sm whitespace-nowrap';
+            if (filter === 'completed') document.getElementById('filterCompleted').className = 'filter-btn px-3 py-1 text-xs font-semibold rounded-full bg-accent text-slate-950 shadow-sm whitespace-nowrap';
+            
+            renderTasks();
+        }
+
+        // --- Render Task List ---
+        function renderTasks() {
+            const taskList = document.getElementById('taskList');
+            const searchInput = document.getElementById('searchInput').value.toLowerCase();
+            taskList.innerHTML = '';
+
+            let filtered = tasks.filter(t => {
+                if (currentFilter === 'pending' && t.completed) return false;
+                if (currentFilter === 'completed' && !t.completed) return false;
+                if (searchInput && !t.title.toLowerCase().includes(searchInput) && !(t.desc && t.desc.toLowerCase().includes(searchInput))) return false;
+                return true;
+            });
+
+            filtered.sort((a, b) => {
+                if (a.completed !== b.completed) return a.completed ? 1 : -1;
+                return new Date(`${a.dueDate}T${a.dueTime}`) - new Date(`${b.dueDate}T${b.dueTime}`);
+            });
+
+            document.getElementById('taskCountText').innerText = `全 ${filtered.length} 件の課題`;
+
+            const urgentCount = tasks.filter(t => !t.completed && getDaysRemaining(t.dueDate) <= 2).length;
+            document.getElementById('urgentCountText').innerText = urgentCount > 0 ? `⚠️ 締め切り間近: ${urgentCount}件` : '';
+
+            if (filtered.length === 0) {
+                taskList.innerHTML = `
+                    <div class="text-center py-12 text-slate-500">
+                        <i class="fa-solid fa-clipboard-check text-4xl mb-3 text-slate-700"></i>
+                        <p class="text-sm">該当する課題はありません</p>
+                    </div>
+                `;
+                return;
+            }
+
+            filtered.forEach(task => {
+                const daysLeft = getDaysRemaining(task.dueDate);
+                const catDetails = getCategoryDetails(task.category);
+                
+                let badgeClass = 'bg-slate-800 text-slate-400';
+                let badgeText = `${task.dueDate} ${task.dueTime}`;
+
+                if (!task.completed) {
+                    if (daysLeft < 0) {
+                        badgeClass = 'bg-rose-500/20 text-rose-400 border border-rose-500/30';
+                        badgeText = `期限超過 (${Math.abs(daysLeft)}年前)`;
+                    } else if (daysLeft === 0) {
+                        badgeClass = 'bg-amber-500/20 text-amber-400 border border-amber-500/30 font-bold';
+                        badgeText = `今日締切 (${task.dueTime})`;
+                    } else if (daysLeft === 1) {
+                        badgeClass = 'bg-amber-500/10 text-amber-300 border border-amber-500/20';
+                        badgeText = `明日締切 (${task.dueTime})`;
+                    } else {
+                        badgeText = `あと${daysLeft}日 (${task.dueDate})`;
+                    }
+                }
+
+                const item = document.createElement('div');
+                item.className = `bg-slate-900 border ${task.completed ? 'border-slate-800/60 opacity-60' : 'border-slate-800'} rounded-2xl p-4 shadow-md transition hover:border-slate-700 flex flex-col gap-2.5`;
+                item.innerHTML = `
+                    <div class="flex items-start justify-between gap-3">
+                        <div class="flex items-start gap-3 flex-1 min-w-0">
+                            <button onclick="toggleTaskComplete('${task.id}')" class="mt-0.5 text-xl transition text-slate-600 hover:text-accent">
+                                <i class="fa-${task.completed ? 'solid fa-circle-check text-accent' : 'regular fa-circle'}"></i>
+                            </button>
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-center gap-2 flex-wrap mb-1">
+                                    <span class="px-2 py-0.5 text-[10px] font-bold rounded-md border ${catDetails.color}">
+                                        ${catDetails.label}
+                                    </span>
+                                    <span class="text-[10px] px-2 py-0.5 rounded-full font-medium ${badgeClass}">
+                                        ${badgeText}
+                                    </span>
+                                </div>
+                                <h4 class="font-bold text-sm text-slate-100 ${task.completed ? 'line-through text-slate-500' : ''} truncate">${escapeHtml(task.title)}</h4>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-1 shrink-0">
+                            <button onclick="openModal('${task.id}')" class="p-1.5 text-slate-500 hover:text-slate-300 transition text-xs"><i class="fa-solid fa-pen"></i></button>
+                            <button onclick="deleteTask('${task.id}')" class="p-1.5 text-slate-500 hover:text-rose-400 transition text-xs"><i class="fa-solid fa-trash"></i></button>
+                        </div>
+                    </div>
+                    ${task.desc ? `<p class="text-xs text-slate-400 bg-slate-950/60 p-2.5 rounded-xl border border-slate-800/80 line-clamp-2 leading-relaxed ml-8">${escapeHtml(task.desc)}</p>` : ''}
+                `;
+                taskList.appendChild(item);
+            });
+        }
+
+        // --- Render Calendar ---
+        function renderCalendar() {
+            const year = currentDate.getFullYear();
+            const month = currentDate.getMonth();
+
+            const monthNames = ["1月", "2月", "3月", "4月", "5月", "6月", "7月", "8月", "9月", "10月", "11月", "12月"];
+            document.getElementById('calendarMonthYear').innerText = `${year}年 ${monthNames[month]}`;
+
+            const firstDay = new Date(year, month, 1).getDay();
+            const lastDate = new Date(year, month + 1, 0).getDate();
+
+            const grid = document.getElementById('calendarGrid');
+            grid.innerHTML = '';
+
+            for (let i = 0; i < firstDay; i++) {
+                const blank = document.createElement('div');
+                blank.className = 'aspect-square';
+                grid.appendChild(blank);
+            }
+
+            const todayStr = getFormattedDateStr(new Date());
+
+            for (let date = 1; date <= lastDate; date++) {
+                const dateObj = new Date(year, month, date);
+                const dateStr = getFormattedDateStr(dateObj);
+                const dayTasks = tasks.filter(t => t.dueDate === dateStr);
+
+                const cell = document.createElement('div');
+                const isSelected = dateStr === selectedCalendarDateStr;
+                const isToday = dateStr === todayStr;
+
+                cell.onclick = () => selectCalendarDate(dateStr);
+                cell.className = `aspect-square rounded-xl p-1 flex flex-col items-center justify-between cursor-pointer transition relative border ${
+                    isSelected ? 'border-accent bg-accent/10 shadow-sm' : isToday ? 'border-slate-700 bg-slate-800/80' : 'border-transparent hover:bg-slate-800/50'
+                }`;
+
+                let dotsHtml = '';
+                if (dayTasks.length > 0) {
+                    dotsHtml = '<div class="flex items-center justify-center gap-0.5 mt-1 flex-wrap max-w-full px-0.5">';
+                    const displayTasks = dayTasks.slice(0, 3);
+                    displayTasks.forEach(t => {
+                        const catDetails = getCategoryDetails(t.category);
+                        dotsHtml += `<span class="w-2 h-2 rounded-full ${t.completed ? 'bg-slate-600' : catDetails.dot}"></span>`;
+                    });
+                    if (dayTasks.length > 3) {
+                        dotsHtml += `<span class="text-[8px] text-slate-400 font-bold ml-0.5">+${dayTasks.length - 3}</span>`;
+                    }
+                    dotsHtml += '</div>';
+                }
+
+                cell.innerHTML = `
+                    <span class="text-xs font-semibold ${isToday ? 'text-accent font-bold' : 'text-slate-300'}">${date}</span>
+                    ${dotsHtml}
+                `;
+                grid.appendChild(cell);
+            }
+
+            renderCalendarSelectedTasks();
+        }
+
+        function selectCalendarDate(dateStr) {
+            selectedCalendarDateStr = dateStr;
+            renderCalendar();
+        }
+
+        function renderCalendarSelectedTasks() {
+            const container = document.getElementById('calendarSelectedTasks');
+            const title = document.getElementById('selectedDateTitle');
+            if (!container) return;
+
+            title.innerText = `${selectedCalendarDateStr} の課題`;
+            container.innerHTML = '';
+
+            const dayTasks = tasks.filter(t => t.dueDate === selectedCalendarDateStr);
+
+            if (dayTasks.length === 0) {
+                container.innerHTML = `<p class="text-xs text-slate-500 py-3 text-center">この日に締め切りの課題はありません</p>`;
+                return;
+            }
+
+            dayTasks.forEach(task => {
+                const catDetails = getCategoryDetails(task.category);
+                const item = document.createElement('div');
+                item.className = `bg-slate-950 p-3 rounded-xl border border-slate-800 flex flex-col gap-2`;
+                item.innerHTML = `
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <span class="px-2 py-0.5 text-[10px] font-bold rounded border ${catDetails.color}">${catDetails.label}</span>
+                            <span class="text-xs font-bold ${task.completed ? 'line-through text-slate-500' : 'text-slate-200'}">${escapeHtml(task.title)}</span>
+                        </div>
+                        <span class="text-xs text-slate-400">${task.dueTime} 締切</span>
+                    </div>
+                    ${task.desc ? `<p class="text-xs text-slate-400 bg-slate-900/80 p-2 rounded-lg border border-slate-800/80 leading-relaxed">${escapeHtml(task.desc)}</p>` : ''}
+                `;
+                container.appendChild(item);
+            });
+        }
+
+        function changeMonth(delta) {
+            currentDate.setMonth(currentDate.getMonth() + delta);
+            renderCalendar();
+        }
+
+        function resetToToday() {
+            currentDate = new Date();
+            selectedCalendarDateStr = getFormattedDateStr(new Date());
+            renderCalendar();
+        }
+
+        // --- Render Settings Page ---
+        function renderSettingsPage() {
+            renderCategorySettingsList();
+            renderCategorySelectForNotify();
+            loadCategoryNotifySettings();
+        }
+
+        function renderCategorySettingsList() {
+            const list = document.getElementById('categorySettingsList');
+            if (!list) return;
+            list.innerHTML = '';
+
+            Object.keys(customCategories).forEach(key => {
+                const cat = customCategories[key];
+                const preset = COLOR_PRESETS[cat.colorKey] || COLOR_PRESETS.purple;
+
+                const item = document.createElement('div');
+                item.className = 'flex items-center justify-between bg-slate-950 p-2.5 rounded-xl border border-slate-800';
+                item.innerHTML = `
+                    <div class="flex items-center gap-2">
+                        <span class="px-2.5 py-0.5 text-xs font-bold rounded-md border ${preset.color}">
+                            ${escapeHtml(cat.label)}
+                        </span>
+                        <span class="text-[10px] text-slate-500">(${preset.name})</span>
+                    </div>
+                    <button onclick="deleteCategory('${key}')" class="text-slate-500 hover:text-rose-400 p-1 text-xs transition">
+                        <i class="fa-solid fa-trash"></i>
+                    </button>
+                `;
+                list.appendChild(item);
+            });
+        }
+
+        function renderCategorySelectForNotify() {
+            const select = document.getElementById('notifyCategorySelect');
+            if (!select) return;
+            select.innerHTML = '';
+
+            Object.keys(customCategories).forEach(key => {
+                const cat = customCategories[key];
+                const option = document.createElement('option');
+                option.value = key;
+                option.innerText = cat.label;
+                select.appendChild(option);
+            });
+        }
+
+        function loadCategoryNotifySettings() {
+            const catKey = document.getElementById('notifyCategorySelect')?.value;
+            if (!catKey) return;
+
+            const timings = categoryNotifyTimings[catKey] || {};
+
+            const getSetting = (key) => {
+                const val = timings[key];
+                if (typeof val === 'boolean') {
+                    return { enabled: val, template: DEFAULT_NOTIFICATION_TEMPLATES[key] };
+                } else if (val && typeof val === 'object') {
+                    return {
+                        enabled: val.enabled !== false,
+                        template: val.template || DEFAULT_NOTIFICATION_TEMPLATES[key]
+                    };
+                }
+                return { enabled: true, template: DEFAULT_NOTIFICATION_TEMPLATES[key] };
+            };
+
+            const s1w = getSetting('1w_21');
+            document.getElementById('chk_1w_21').checked = s1w.enabled;
+            document.getElementById('msg_1w_21').value = s1w.template;
+
+            const s3d = getSetting('3d_21');
+            document.getElementById('chk_3d_21').checked = s3d.enabled;
+            document.getElementById('msg_3d_21').value = s3d.template;
+
+            const s1d = getSetting('1d_21');
+            document.getElementById('chk_1d_21').checked = s1d.enabled;
+            document.getElementById('msg_1d_21').value = s1d.template;
+
+            const sSame = getSetting('same_08');
+            document.getElementById('chk_same_08').checked = sSame.enabled;
+            document.getElementById('msg_same_08').value = sSame.template;
+        }
+
+        function saveCategoryNotifySettings() {
+            const catKey = document.getElementById('notifyCategorySelect')?.value;
+            if (!catKey) return;
+
+            categoryNotifyTimings[catKey] = {
+                '1w_21': {
+                    enabled: document.getElementById('chk_1w_21').checked,
+                    template: document.getElementById('msg_1w_21').value.trim() || DEFAULT_NOTIFICATION_TEMPLATES['1w_21']
+                },
+                '3d_21': {
+                    enabled: document.getElementById('chk_3d_21').checked,
+                    template: document.getElementById('msg_3d_21').value.trim() || DEFAULT_NOTIFICATION_TEMPLATES['3d_21']
+                },
+                '1d_21': {
+                    enabled: document.getElementById('chk_1d_21').checked,
+                    template: document.getElementById('msg_1d_21').value.trim() || DEFAULT_NOTIFICATION_TEMPLATES['1d_21']
+                },
+                'same_08': {
+                    enabled: document.getElementById('chk_same_08').checked,
+                    template: document.getElementById('msg_same_08').value.trim() || DEFAULT_NOTIFICATION_TEMPLATES['same_08']
+                }
+            };
+
+            saveToStorage();
+            const catName = customCategories[catKey]?.label || '選択したカテゴリ';
+            showToast(`「${catName}」の通知設定を保存しました`);
+        }
+
+        function addNewCategory() {
+            const labelInput = document.getElementById('newCategoryLabel');
+            const colorSelect = document.getElementById('newCategoryColor');
+
+            const label = labelInput.value.trim();
+            const colorKey = colorSelect.value;
+
+            if (!label) {
+                showToast('カテゴリ名を入力してください');
+                return;
+            }
+
+            const newKey = 'cat_' + Date.now();
+            customCategories[newKey] = { label, colorKey };
+
+            labelInput.value = '';
+            saveToStorage();
+            renderCategorySettingsList();
+            renderCategoryOptions();
+            renderCategorySelectForNotify();
+            loadCategoryNotifySettings();
+            showToast(`カテゴリ「${label}」を追加しました`);
+        }
+
+        function deleteCategory(catKey) {
+            if (Object.keys(customCategories).length <= 1) {
+                showToast('カテゴリは最低1つ必要です');
+                return;
+            }
+
+            delete customCategories[catKey];
+            delete categoryNotifyTimings[catKey];
+            saveToStorage();
+            renderCategorySettingsList();
+            renderCategoryOptions();
+            renderCategorySelectForNotify();
+            loadCategoryNotifySettings();
+            renderTasks();
+            showToast('カテゴリを削除しました');
+        }
+
+        function renderCategoryOptions() {
+            const select = document.getElementById('taskCategory');
+            if (!select) return;
+            select.innerHTML = '';
+
+            Object.keys(customCategories).forEach(key => {
+                const cat = customCategories[key];
+                const option = document.createElement('option');
+                option.value = key;
+                option.innerText = cat.label;
+                select.appendChild(option);
+            });
+        }
+
+        function renderHourOptions() {
+            const selectH = document.getElementById('taskDueHour');
+            const selectM = document.getElementById('taskDueMinute');
+            
+            if (selectH && selectH.children.length === 0) {
+                for (let i = 0; i < 24; i++) {
+                    const val = String(i).padStart(2, '0');
+                    const opt = document.createElement('option');
+                    opt.value = val;
+                    opt.innerText = `${val}時`;
+                    selectH.appendChild(opt);
+                }
+            }
+
+            if (selectM && selectM.children.length === 0) {
+                for (let i = 0; i < 60; i++) {
+                    const val = String(i).padStart(2, '0');
+                    const opt = document.createElement('option');
+                    opt.value = val;
+                    opt.innerText = `${val}分`;
+                    selectM.appendChild(opt);
+                }
+            }
+        }
+
+        // --- Task Modal Handlers ---
+        function openModal(taskId = null) {
+            const modal = document.getElementById('taskModal');
+            const modalTitle = document.getElementById('modalTitle');
+            renderCategoryOptions();
+            renderHourOptions();
+
+            if (taskId) {
+                const task = tasks.find(t => t.id === taskId);
+                if (!task) return;
+
+                document.getElementById('taskId').value = task.id;
+                document.getElementById('taskTitle').value = task.title;
+                document.getElementById('taskCategory').value = task.category || Object.keys(customCategories)[0];
+                document.getElementById('taskDesc').value = task.desc || '';
+                document.getElementById('taskDueDate').value = task.dueDate;
+
+                const [h, m] = (task.dueTime || '23:00').split(':');
+                document.getElementById('taskDueHour').value = h || '23';
+                document.getElementById('taskDueMinute').value = m || '00';
+
+                modalTitle.innerText = '課題を編集';
+            } else {
+                document.getElementById('taskForm').reset();
+                document.getElementById('taskId').value = '';
+                document.getElementById('taskDueDate').value = getFormattedDateStr(new Date());
+                document.getElementById('taskDueHour').value = '23';
+                document.getElementById('taskDueMinute').value = '00';
+                modalTitle.innerText = '新しい課題を追加';
+            }
+
+            modal.classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('taskModal').classList.add('hidden');
+        }
+
+        function saveTask(event) {
+            event.preventDefault();
+
+            const id = document.getElementById('taskId').value;
+            const title = document.getElementById('taskTitle').value.trim();
+            const category = document.getElementById('taskCategory').value;
+            const desc = document.getElementById('taskDesc').value.trim();
+            const dueDate = document.getElementById('taskDueDate').value;
+            const hour = document.getElementById('taskDueHour').value;
+            const minute = document.getElementById('taskDueMinute').value;
+
+            const dueTime = `${hour}:${minute}`;
+
+            if (id) {
+                const index = tasks.findIndex(t => t.id === id);
+                if (index !== -1) {
+                    tasks[index] = {
+                        ...tasks[index],
+                        title,
+                        category,
+                        desc,
+                        dueDate,
+                        dueTime
+                    };
+                }
+            } else {
+                const newTask = {
+                    id: 'task_' + Date.now(),
+                    title,
+                    category,
+                    desc,
+                    dueDate,
+                    dueTime,
+                    completed: false,
+                    notifiedFlags: {}
+                };
+                tasks.push(newTask);
+            }
+
+            saveToStorage();
+            closeModal();
+            renderTasks();
+            renderCalendar();
+            showToast(id ? '課題を更新しました' : '課題を追加しました');
+        }
+
+        function toggleTaskComplete(taskId) {
+            const task = tasks.find(t => t.id === taskId);
+            if (task) {
+                task.completed = !task.completed;
+                saveToStorage();
+                renderTasks();
+                renderCalendar();
+                showToast(task.completed ? '課題を完了にしました！' : '課題を進行中に戻しました');
+            }
+        }
+
+        function deleteTask(taskId) {
+            tasks = tasks.filter(t => t.id !== taskId);
+            saveToStorage();
+            renderTasks();
+            renderCalendar();
+            showToast('課題を削除しました');
+        }
+
+        // --- Notification Handling ---
+        function checkNotificationPermissionStatus() {
+            const statusText = document.getElementById('notificationStatusText');
+            if (!('Notification' in window)) {
+                statusText.innerText = '非対応';
+                return;
+            }
+            if (Notification.permission === 'granted') {
+                statusText.innerText = '通知オン';
+            } else if (Notification.permission === 'denied') {
+                statusText.innerText = '通知ブロック';
+            } else {
+                statusText.innerText = '通知許可';
+            }
+        }
+
+        function requestNotificationPermission() {
+            if (!('Notification' in window)) {
+                showToast('このブラウザは通知機能をサポートしていません');
+                return;
+            }
+            Notification.requestPermission().then(permission => {
+                checkNotificationPermissionStatus();
+                if (permission === 'granted') {
+                    showToast('通知が許可されました');
+                } else {
+                    showToast('通知許可が得られませんでした');
+                }
+            });
+        }
+
+        function checkAndSendNotifications() {
+            if (!('Notification' in window) || Notification.permission !== 'granted') return;
+
+            const now = new Date();
+            const currentHour = now.getHours();
+
+            tasks.forEach(task => {
+                if (task.completed) return;
+                if (!task.notifiedFlags) task.notifiedFlags = {};
+
+                const daysLeft = getDaysRemaining(task.dueDate);
+                const catKey = task.category;
+                const timings = categoryNotifyTimings[catKey] || {};
+
+                const getTimingConfig = (key) => {
+                    const val = timings[key];
+                    if (typeof val === 'boolean') {
+                        return { enabled: val, template: DEFAULT_NOTIFICATION_TEMPLATES[key] };
+                    } else if (val && typeof val === 'object') {
+                        return { enabled: val.enabled !== false, template: val.template || DEFAULT_NOTIFICATION_TEMPLATES[key] };
+                    }
+                    return { enabled: true, template: DEFAULT_NOTIFICATION_TEMPLATES[key] };
+                };
+
+                const cfg1w = getTimingConfig('1w_21');
+                const cfg3d = getTimingConfig('3d_21');
+                const cfg1d = getTimingConfig('1d_21');
+                const cfgSame = getTimingConfig('same_08');
+
+                if (cfg1w.enabled && daysLeft === 7 && currentHour >= 21 && !task.notifiedFlags['1w_21']) {
+                    sendNotification('1w_21', task, cfg1w.template);
+                }
+                if (cfg3d.enabled && daysLeft === 3 && currentHour >= 21 && !task.notifiedFlags['3d_21']) {
+                    sendNotification('3d_21', task, cfg3d.template);
+                }
+                if (cfg1d.enabled && daysLeft === 1 && currentHour >= 21 && !task.notifiedFlags['1d_21']) {
+                    sendNotification('1d_21', task, cfg1d.template);
+                }
+                if (cfgSame.enabled && daysLeft === 0 && currentHour >= 8 && !task.notifiedFlags['same_08']) {
+                    sendNotification('same_08', task, cfgSame.template);
+                }
+            });
+
+            saveToStorage();
+        }
+
+        function sendNotification(key, task, customTemplate = null) {
+            let template = customTemplate || DEFAULT_NOTIFICATION_TEMPLATES[key];
+            let bodyMsg = template.replace(/{title}/g, task.title).replace(/{dueDate}/g, task.dueDate);
+
+            new Notification('MatsuReminder', {
+                body: bodyMsg,
+                icon: 'icon.png'
+            });
+
+            task.notifiedFlags[key] = true;
+        }
+
+        // --- Window Initializer ---
+        window.onload = async function() {
+            await initStorageSync();
+            renderHourOptions();
+            checkNotificationPermissionStatus();
+            switchPage('tasks');
+            checkAndSendNotifications();
+            setInterval(checkAndSendNotifications, 60000);
+        };
+    </script>
+</body>
+</html>
