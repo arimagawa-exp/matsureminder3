@@ -12,6 +12,15 @@
     <link rel="shortcut icon" href="icon.png">
 
     <title>MatsuReminder</title>
+    <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+<script>
+  window.OneSignalDeferred = window.OneSignalDeferred || [];
+  OneSignalDeferred.push(async function(OneSignal) {
+    await OneSignal.init({
+      appId: "YOUR_APP_ID", c3f77deb-83a2-4ce6-a0c2-709d7d428055
+    });
+  });
+</script>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- FontAwesome for icons -->
